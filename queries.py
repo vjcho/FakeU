@@ -153,5 +153,107 @@ min = cur.fetchall()
 print min
 
 
+
+#3f
+cur.execute("""
+    SELECT avgs.majors, avgs.avgpa 
+    FROM (SELECT majors, AVG(gpa) AS avgpa
+        FROM (
+            SELECT CASE
+                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0
+                WHEN GRADE = 'A-' THEN 3.7
+                WHEN GRADE = 'B+' THEN 3.33
+                WHEN GRADE = 'B' THEN 3
+                WHEN GRADE = 'B-' THEN 2.7
+                WHEN GRADE = 'C+' THEN 2.3
+                WHEN GRADE = 'C' THEN 2
+                WHEN GRADE = 'C-' THEN 1.7
+                WHEN GRADE = 'D+' THEN 1.3
+                WHEN GRADE = 'D' THEN 1
+                WHEN GRADE = 'D-' THEN .7
+                WHEN GRADE = 'F' THEN 0
+            END AS gpa, student.major AS majors, course.cid AS crs, course.subj AS sub
+            FROM student, course
+            WHERE student.scid = course.cid AND course.subj = 'ABC'
+        ) AS grades
+    GROUP BY majors) AS avgs,
+
+    (SELECT MIN(avg) AS lowest, MAX(avg) AS highest
+    FROM (
+        SELECT majors, AVG(gpa) 
+        FROM (
+            SELECT CASE
+                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0
+                WHEN GRADE = 'A-' THEN 3.7
+                WHEN GRADE = 'B+' THEN 3.33
+                WHEN GRADE = 'B' THEN 3
+                WHEN GRADE = 'B-' THEN 2.7
+                WHEN GRADE = 'C+' THEN 2.3
+                WHEN GRADE = 'C' THEN 2
+                WHEN GRADE = 'C-' THEN 1.7
+                WHEN GRADE = 'D+' THEN 1.3
+                WHEN GRADE = 'D' THEN 1
+                WHEN GRADE = 'D-' THEN .7
+                WHEN GRADE = 'F' THEN 0
+            END AS gpa, student.major AS majors, course.cid AS crs, course.subj AS sub
+            FROM student, course
+            WHERE student.scid = course.cid AND course.subj = 'ABC'
+        ) AS grades
+    GROUP BY majors) AS averages) AS MAX
+    WHERE avgs.avgpa = max.highest;  
+    """)
+max = cur.fetchall()
+print max
+
+cur.execute("""
+    SELECT avgs.majors, avgs.avgpa 
+    FROM (SELECT majors, AVG(gpa) AS avgpa
+        FROM (
+            SELECT CASE
+                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0
+                WHEN GRADE = 'A-' THEN 3.7
+                WHEN GRADE = 'B+' THEN 3.33
+                WHEN GRADE = 'B' THEN 3
+                WHEN GRADE = 'B-' THEN 2.7
+                WHEN GRADE = 'C+' THEN 2.3
+                WHEN GRADE = 'C' THEN 2
+                WHEN GRADE = 'C-' THEN 1.7
+                WHEN GRADE = 'D+' THEN 1.3
+                WHEN GRADE = 'D' THEN 1
+                WHEN GRADE = 'D-' THEN .7
+                WHEN GRADE = 'F' THEN 0
+            END AS gpa, student.major AS majors, course.cid AS crs, course.subj AS sub
+            FROM student, course
+            WHERE student.scid = course.cid AND course.subj = 'ABC'
+        ) AS grades
+    GROUP BY majors) AS avgs,
+
+    (SELECT MIN(avg) AS lowest, MAX(avg) AS highest
+    FROM (
+        SELECT majors, AVG(gpa) 
+        FROM (
+            SELECT CASE
+                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0
+                WHEN GRADE = 'A-' THEN 3.7
+                WHEN GRADE = 'B+' THEN 3.33
+                WHEN GRADE = 'B' THEN 3
+                WHEN GRADE = 'B-' THEN 2.7
+                WHEN GRADE = 'C+' THEN 2.3
+                WHEN GRADE = 'C' THEN 2
+                WHEN GRADE = 'C-' THEN 1.7
+                WHEN GRADE = 'D+' THEN 1.3
+                WHEN GRADE = 'D' THEN 1
+                WHEN GRADE = 'D-' THEN .7
+                WHEN GRADE = 'F' THEN 0
+            END AS gpa, student.major AS majors, course.cid AS crs, course.subj AS sub
+            FROM student, course
+            WHERE student.scid = course.cid AND course.subj = 'ABC'
+        ) AS grades
+    GROUP BY majors) AS averages) AS MAX
+    WHERE avgs.avgpa = max.lowest;  
+    """)
+min = cur.fetchall()
+print min
+
 cur.close()
 conn.close()
