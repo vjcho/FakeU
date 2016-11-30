@@ -94,27 +94,73 @@ FROM (SELECT instructor, AVG(gpa) AS avgGpa
   ) AS averages) AS max
 WHERE avgs.avgGpa = max.highest;
 
--- SELECT MIN(avg) AS lowest, MAX(avg) AS highest
--- FROM (
---   SELECT instructor, AVG(gpa) 
---   FROM (
---     SELECT
---       CASE
---         WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0
---         WHEN GRADE = 'A-' THEN 3.7
---         WHEN GRADE = 'B+' THEN 3.33
---         WHEN GRADE = 'B' THEN 3
---         WHEN GRADE = 'B-' THEN 2.7
---         WHEN GRADE = 'C+' THEN 2.3
---         WHEN GRADE = 'C' THEN 2
---         WHEN GRADE = 'C-' THEN 1.7
---         WHEN GRADE = 'D+' THEN 1.3
---         WHEN GRADE = 'D' THEN 1
---         WHEN GRADE = 'D-' THEN .7
---         WHEN GRADE = 'F' THEN 0
---       END AS gpa, roster.RINSTRUCTOR AS instructor
---     FROM student, roster
---     WHERE student.scid = roster.rcid
---   ) AS grades
---   GROUP BY instructor
--- ) AS averages;
+3d.
+
+SELECT AVG(gpa) AS avgGpa
+FROM (
+    SELECT CASE
+        WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4
+        WHEN GRADE = 'A-' THEN 3.7
+        WHEN GRADE = 'B+' THEN 3.33
+        WHEN GRADE = 'B' THEN 3
+        WHEN GRADE = 'B-' THEN 2.7
+        WHEN GRADE = 'C+' THEN 2.3
+        WHEN GRADE = 'C' THEN 2
+        WHEN GRADE = 'C-' THEN 1.7
+        WHEN GRADE = 'D+' THEN 1.3
+        WHEN GRADE = 'D' THEN 1
+        WHEN GRADE = 'D-' THEN .7
+        WHEN GRADE = 'F' THEN 0
+    END AS gpa, course.subj, course.crse
+    FROM student, course
+    WHERE course.subj = 'ABC' AND course.crse = 100
+) AS grades
+
+SELECT avgs.instructor, avgs.avgGpa AS "Average GPA"
+FROM (SELECT instructor, AVG(gpa) AS avgGpa
+  FROM (
+    SELECT
+      CASE
+        WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0
+        WHEN GRADE = 'A-' THEN 3.7
+        WHEN GRADE = 'B+' THEN 3.33
+        WHEN GRADE = 'B' THEN 3
+        WHEN GRADE = 'B-' THEN 2.7
+        WHEN GRADE = 'C+' THEN 2.3
+        WHEN GRADE = 'C' THEN 2
+        WHEN GRADE = 'C-' THEN 1.7
+        WHEN GRADE = 'D+' THEN 1.3
+        WHEN GRADE = 'D' THEN 1
+        WHEN GRADE = 'D-' THEN .7
+        WHEN GRADE = 'F' THEN 0
+      END AS gpa, roster.RINSTRUCTOR AS instructor
+    FROM student, roster
+    WHERE student.scid = roster.rcid
+  ) AS grades
+  GROUP BY instructor) AS avgs,
+  
+  (SELECT MIN(avg) AS lowest, MAX(avg) AS highest
+  FROM (
+    SELECT instructor, AVG(gpa) 
+    FROM (
+      SELECT
+        CASE
+          WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0
+          WHEN GRADE = 'A-' THEN 3.7
+          WHEN GRADE = 'B+' THEN 3.33
+          WHEN GRADE = 'B' THEN 3
+          WHEN GRADE = 'B-' THEN 2.7
+          WHEN GRADE = 'C+' THEN 2.3
+          WHEN GRADE = 'C' THEN 2
+          WHEN GRADE = 'C-' THEN 1.7
+          WHEN GRADE = 'D+' THEN 1.3
+          WHEN GRADE = 'D' THEN 1
+          WHEN GRADE = 'D-' THEN .7
+          WHEN GRADE = 'F' THEN 0
+        END AS gpa, roster.RINSTRUCTOR AS instructor
+      FROM student, roster
+      WHERE student.scid = roster.rcid
+    ) AS grades
+    GROUP BY instructor
+  ) AS averages) AS max
+WHERE avgs.avgGpa = max.highest;

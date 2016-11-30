@@ -152,6 +152,107 @@ cur.execute("""
 min = cur.fetchall()
 print min
 
+# 3d
+cur.execute("""
+    SELECT avgs.instructor, avgs.avgGpa AS "Average GPA"
+    FROM (SELECT AVG(gpa) AS avgGpa, instructor
+        FROM (
+            SELECT CASE
+                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4
+                WHEN GRADE = 'A-' THEN 3.7
+                WHEN GRADE = 'B+' THEN 3.33
+                WHEN GRADE = 'B' THEN 3
+                WHEN GRADE = 'B-' THEN 2.7
+                WHEN GRADE = 'C+' THEN 2.3
+                WHEN GRADE = 'C' THEN 2
+                WHEN GRADE = 'C-' THEN 1.7
+                WHEN GRADE = 'D+' THEN 1.3
+                WHEN GRADE = 'D' THEN 1
+                WHEN GRADE = 'D-' THEN .7
+                WHEN GRADE = 'F' THEN 0
+            END AS gpa, course.subj, course.crse, roster.rinstructor AS instructor
+            FROM student, course, roster
+            WHERE student.scid = course.cid AND roster.rcid = course.cid AND roster.rcid = student.scid AND course.subj = 'ABC' AND course.crse BETWEEN 100 AND 199
+        ) AS grades
+    GROUP BY instructor) AS avgs,
+      (SELECT MIN(avg) AS lowest, MAX(avg) AS highest
+      FROM (
+        SELECT AVG(gpa), instructor
+        FROM (
+            SELECT CASE
+                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4
+                WHEN GRADE = 'A-' THEN 3.7
+                WHEN GRADE = 'B+' THEN 3.33
+                WHEN GRADE = 'B' THEN 3
+                WHEN GRADE = 'B-' THEN 2.7
+                WHEN GRADE = 'C+' THEN 2.3
+                WHEN GRADE = 'C' THEN 2
+                WHEN GRADE = 'C-' THEN 1.7
+                WHEN GRADE = 'D+' THEN 1.3
+                WHEN GRADE = 'D' THEN 1
+                WHEN GRADE = 'D-' THEN .7
+                WHEN GRADE = 'F' THEN 0
+            END AS gpa, course.subj, course.crse, roster.rinstructor AS instructor
+            FROM student, course, roster
+            WHERE student.scid = course.cid AND roster.rcid = course.cid AND roster.rcid = student.scid AND course.subj = 'ABC' AND course.crse BETWEEN 100 AND 199
+        ) AS grades
+        GROUP BY instructor
+        ) AS averages) AS max
+    WHERE avgs.avgGpa = max.highest;
+    """)
+max = cur.fetchall()
+print max
+
+cur.execute("""
+    SELECT avgs.instructor, avgs.avgGpa AS "Average GPA"
+    FROM (SELECT AVG(gpa) AS avgGpa, instructor
+        FROM (
+            SELECT CASE
+                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4
+                WHEN GRADE = 'A-' THEN 3.7
+                WHEN GRADE = 'B+' THEN 3.33
+                WHEN GRADE = 'B' THEN 3
+                WHEN GRADE = 'B-' THEN 2.7
+                WHEN GRADE = 'C+' THEN 2.3
+                WHEN GRADE = 'C' THEN 2
+                WHEN GRADE = 'C-' THEN 1.7
+                WHEN GRADE = 'D+' THEN 1.3
+                WHEN GRADE = 'D' THEN 1
+                WHEN GRADE = 'D-' THEN .7
+                WHEN GRADE = 'F' THEN 0
+            END AS gpa, course.subj, course.crse, roster.rinstructor AS instructor
+            FROM student, course, roster
+            WHERE student.scid = course.cid AND roster.rcid = course.cid AND roster.rcid = student.scid AND course.subj = 'ABC' AND course.crse BETWEEN 100 AND 199
+        ) AS grades
+    GROUP BY instructor) AS avgs,
+      (SELECT MIN(avg) AS lowest, MAX(avg) AS highest
+      FROM (
+        SELECT AVG(gpa), instructor
+        FROM (
+            SELECT CASE
+                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4
+                WHEN GRADE = 'A-' THEN 3.7
+                WHEN GRADE = 'B+' THEN 3.33
+                WHEN GRADE = 'B' THEN 3
+                WHEN GRADE = 'B-' THEN 2.7
+                WHEN GRADE = 'C+' THEN 2.3
+                WHEN GRADE = 'C' THEN 2
+                WHEN GRADE = 'C-' THEN 1.7
+                WHEN GRADE = 'D+' THEN 1.3
+                WHEN GRADE = 'D' THEN 1
+                WHEN GRADE = 'D-' THEN .7
+                WHEN GRADE = 'F' THEN 0
+            END AS gpa, course.subj, course.crse, roster.rinstructor AS instructor
+            FROM student, course, roster
+            WHERE student.scid = course.cid AND roster.rcid = course.cid AND roster.rcid = student.scid AND course.subj = 'ABC' AND course.crse BETWEEN 100 AND 199
+        ) AS grades
+        GROUP BY instructor
+        ) AS averages) AS max
+    WHERE avgs.avgGpa = max.lowest;
+    """)
+min = cur.fetchall()
+print min
+
 
 cur.close()
 conn.close()
