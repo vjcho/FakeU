@@ -255,5 +255,33 @@ cur.execute("""
 min = cur.fetchall()
 print min
 
+#3g
+cur.execute("""
+    SELECT COUNT(DISTINCT theStudent.student1)
+    FROM
+        (SELECT DISTINCT sameSIDs.student1, sameSIDs.studentMaj
+        FROM
+            (SELECT s1.SID AS student1, s1.major AS studentMaj
+             FROM student s1, student s2
+             WHERE s1.SID = s2.SID AND s1.major NOT LIKE 'ABC%'
+            )AS sameSIDs) AS theStudent, roster r1, roster r2, student laterStudent
+    WHERE
+        theStudent.student1 = r1.RSID AND 
+        theStudent.student1 = r2.RSID AND 
+        theStudent.student1 = laterStudent.SID AND 
+        laterStudent.major LIKE 'ABC%' AND
+        r1.RTERM < r2.RTERM; 
+    """)
+trans = cur.fetchall()
+
+cur.execute("""
+    SELECT COUNT(DISTINCT SID)
+    FROM STUDENT;
+    """)
+total = cur.fetchall()
+ans = [x[0] for x in trans]
+ans2 = [x[0] for x in total]
+print float(ans[0])/float(ans2[0]) * 100
+
 cur.close()
 conn.close()
