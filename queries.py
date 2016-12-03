@@ -403,7 +403,7 @@ cur.execute("""
     GROUP BY theStudent.studentMaj ORDER BY COUNT(DISTINCT theStudent.student1) DESC
     LIMIT 5;
     """)
-trans = cur.fetchall()
+majorCount= cur.fetchall()
 
 cur.execute("""
     SELECT COUNT(DISTINCT SID)
