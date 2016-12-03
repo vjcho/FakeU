@@ -88,6 +88,8 @@ for filename in os.listdir('./Grades'):
                 obj['days'] = row[2]
                 obj['time'] = row[3]
                 obj['build'] = row[4]
+                if row[5] == '':
+                    row[5] = -1
                 obj['room'] = row[5]
 
                 # print obj
