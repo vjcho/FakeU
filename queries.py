@@ -308,6 +308,7 @@ cur.execute("""
     SELECT COUNT(DISTINCT SID)
     FROM STUDENT;
     """)
+
 total = cur.fetchall()
 count = [x[0] for x in majorCount]
 major = [x[1] for x in majorCount]
