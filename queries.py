@@ -11,15 +11,24 @@ conn = psycopg2.connect("dbname='fakeudb'")
 cur = conn.cursor()
 
 # 3a
+print '3a:'
 for i in range(1,21):
-    cur.execute("""SELECT cast(c.count as float)/cast(tot.count as float) AS percentage FROM 
-        (SELECT COUNT(*) FROM  (SELECT TERM, SUM(student.UNITS) AS total, student.sid FROM course, student
-        WHERE student.scid = course.cid GROUP BY student.sid, TERM) AS totalStud WHERE totalStud.total = %s) AS c,
-        (SELECT COUNT(*) FROM student WHERE UNITS <> 0) AS tot;""" % (i))
+    cur.execute("""
+        SELECT cast(c.count as float)/cast(tot.count as float)*100 AS percentage 
+        FROM (
+            SELECT COUNT(*) 
+            FROM (
+                SELECT TERM, SUM(student.UNITS) AS total, student.sid 
+                FROM course, student
+                WHERE student.scid = course.cid GROUP BY student.sid, TERM) AS totalStud 
+            WHERE totalStud.total = %s) AS c,
+        (SELECT COUNT(*) FROM student WHERE UNITS <> 0) AS tot;
+        """ % (i))
     result = cur.fetchall()
     print i,result
 
 # 3b
+print '3b:'
 for i in range(1,21):
     cur.execute("""
         SELECT AVG(x.gpa) 
@@ -52,6 +61,7 @@ for i in range(1,21):
     print i,result
 
 # 3c
+print '3c:'
 cur.execute("""
     SELECT avgs.instructor, avgs.avgGpa AS "Average GPA"
     FROM (SELECT instructor, AVG(gpa) AS avgGpa
@@ -153,6 +163,7 @@ min = cur.fetchall()
 print min
 
 # 3d
+print '3d:'
 cur.execute("""
     SELECT avgs.instructor, avgs.avgGpa AS "Average GPA"
     FROM (SELECT AVG(gpa) AS avgGpa, instructor
@@ -252,6 +263,112 @@ cur.execute("""
     """)
 min = cur.fetchall()
 print min
+
+# 3e
+print '3e'
+cur.execute("""
+    SELECT c1.class,c2.class
+    FROM
+    (SELECT *, meeting.term AS term1
+    FROM meeting, course
+    WHERE meeting.mcid = course.cid AND meeting.term = course.term) AS c1, (SELECT *, meeting.term AS term2
+    FROM meeting, course
+    WHERE meeting.mcid = course.cid AND meeting.term = course.term) AS c2
+    WHERE c1.term1 = c2.term2 AND RIGHT(c1.term1,2) = '06' AND c1.days ~ c2.days AND 
+    ((c1.starttime >= c2.starttime AND c1.starttime <= c2.endtime) 
+        OR (c2.starttime >= c1.starttime AND c2.starttime <= c1.endtime)
+        OR (c1.endtime <= c2.endtime AND c1.endtime >= c2.starttime)
+        OR (c2.endtime <= c1.endtime AND c2.endtime >= c1.starttime)
+        OR (c1.starttime = c2.starttime AND c1.endtime = c2.endtime)) 
+    AND c1.build = c2.build AND c1.room = c2.room AND c1.class <> c2.class
+    GROUP BY c1.class, c2.class;
+    """)
+result = cur.fetchall()
+
+cur.execute("""
+    SELECT x.class1, x.class2
+    FROM(
+    (SELECT c1.class1, c2.class2, c1.sid, c2.sid, c1.major, c2.major, c1.sterm, c2.sterm
+    FROM
+    (SELECT *, course.class AS class1, student.class AS sclass1 
+    FROM student, course
+    WHERE student.scid = course.cid AND student.sterm = course.term
+    ) AS c1, 
+    (SELECT *, course.class AS class2, student.class AS sclass2
+    FROM student, course
+    WHERE student.scid = course.cid AND student.sterm = course.term
+    ) AS c2
+    WHERE c1.term = c2.term AND RIGHT(c1.term,2) = '06' AND c1.sid = c2.sid AND c1.major <> c2.major)
+    UNION
+    (SELECT c1.class1, c2.class2, c1.sid, c2.sid, c1.major, c2.major, c1.sterm, c2.sterm
+    FROM
+    (SELECT *, course.class AS class1, student.class AS sclass1 
+    FROM student, course
+    WHERE student.scid = course.cid AND student.sterm = course.term
+    ) AS c1, 
+    (SELECT *, course.class AS class2, student.class AS sclass2
+    FROM student, course
+    WHERE student.scid = course.cid AND student.sterm = course.term
+    ) AS c2
+    WHERE c1.term = c2.term AND RIGHT(c1.term,2) = '06' AND c1.sid = c2.sid AND c1.sclass1 <> c2.sclass2)
+    UNION
+    (SELECT c1.class1, c2.class2, c1.sid, c2.sid, c1.major, c2.major, c1.sterm, c2.sterm
+    FROM
+    (SELECT *, course.class AS class1, student.class AS sclass1 
+    FROM student, course
+    WHERE student.scid = course.cid AND student.sterm = course.term
+    ) AS c1, 
+    (SELECT *, course.class AS class2, student.class AS sclass2
+    FROM student, course
+    WHERE student.scid = course.cid AND student.sterm = course.term
+    ) AS c2
+    WHERE c1.term = c2.term AND RIGHT(c1.term,2) = '06' AND c1.sid = c2.sid AND c1.status <> c2.status)
+    UNION
+    (SELECT c1.class1, c2.class2, c1.sid, c2.sid, c1.major, c2.major, c1.sterm, c2.sterm
+    FROM
+    (SELECT *, course.class AS class1, student.class AS sclass1 
+    FROM student, course
+    WHERE student.scid = course.cid AND student.sterm = course.term
+    ) AS c1, 
+    (SELECT *, course.class AS class2, student.class AS sclass2
+    FROM student, course
+    WHERE student.scid = course.cid AND student.sterm = course.term
+    ) AS c2
+    WHERE c1.term = c2.term AND RIGHT(c1.term,2) = '06' AND c1.sid = c2.sid AND c1.level <> c2.level)
+    ) AS x
+    GROUP BY x.class1, x.class2;
+    """)
+result2 = cur.fetchall()
+
+# print unique combinations
+classes = []
+ans = []
+first = [x[0] for x in result]
+sec = [x[1] for x in result]
+for i in range(0,len(first)):
+    if first[i] in classes and sec[i] in classes:
+        continue
+    else:
+        classes.append(first[i])
+        classes.append(sec[i])
+        ans.append((first[i],sec[i]))
+
+first = [x[0] for x in result2]
+sec = [x[1] for x in result2]
+for i in range(0,len(first)):
+    if first[i] in classes and sec[i] in classes:
+        continue
+    else:
+        classes.append(first[i])
+        classes.append(sec[i])
+        ans.append((first[i],sec[i]))
+
+print ans
+
+
+# 3f
+
+# 3g
 
 
 cur.close()
