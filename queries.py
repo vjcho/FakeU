@@ -309,10 +309,11 @@ cur.execute("""
     FROM STUDENT;
     """)
 total = cur.fetchall()
+count = [x[0] for x in majorCount]
+major = [x[1] for x in majorCount]
+ans2 = [x[0] for x in total]
 for i in  range (0,5):
-    ans = [x[i] for x in trans]
-    ans2 = [x[i] for x in total]
-    print float(ans[i])/float(ans2[i]) * 100
+    print float(count[i])/float(ans2[0]) * 100, major[i]
 
 cur.close()
 conn.close()
