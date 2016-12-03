@@ -503,20 +503,23 @@ print min
 #3g
 print '3g:'
 cur.execute("""
-    SELECT COUNT(DISTINCT theStudent.student1)
-    FROM
-        (SELECT DISTINCT sameSIDs.student1, sameSIDs.studentMaj
+    SELECT st.totTrans,SUM(st.totTrans), 
+    FROM (
+        SELECT COUNT(DISTINCT theStudent.student1) AS totTrans
         FROM
-            (SELECT s1.SID AS student1, s1.major AS studentMaj
-             FROM student s1, student s2
-             WHERE s1.SID = s2.SID AND s1.major NOT LIKE 'ABC%'
-            )AS sameSIDs) AS theStudent, roster r1, roster r2, student laterStudent
-    WHERE
-        theStudent.student1 = r1.RSID AND 
-        theStudent.student1 = r2.RSID AND 
-        theStudent.student1 = laterStudent.SID AND 
-        laterStudent.major LIKE 'ABC%' AND
-        r1.RTERM < r2.RTERM; 
+            (SELECT DISTINCT sameSIDs.student1, sameSIDs.studentMaj
+            FROM
+                (SELECT s1.SID AS student1, s1.major AS studentMaj
+                 FROM student s1, student s2
+                 WHERE s1.SID = s2.SID AND s1.major NOT LIKE 'ABC%'
+                )AS sameSIDs) AS theStudent, roster r1, roster r2, student laterStudent
+        WHERE
+            theStudent.student1 = r1.RSID AND 
+            theStudent.student1 = r2.RSID AND 
+            theStudent.student1 = laterStudent.SID AND 
+            laterStudent.major LIKE 'ABC%' AND
+            r1.RTERM < r2.RTERM
+    GROUP BY theStudent.studentMaj) AS st;
     """)
 trans = cur.fetchall()
 
@@ -531,7 +534,7 @@ print float(ans[0])/float(ans2[0]) * 100
 
 
 cur.execute("""
-    SELECT COUNT(DISTINCT theStudent.student1), theStudent.studentMaj
+    SELECT COUNT(DISTINCT theStudent.student1) AS totTrans, theStudent.studentMaj
     FROM
         (SELECT DISTINCT sameSIDs.student1, sameSIDs.studentMaj
         FROM
@@ -545,30 +548,30 @@ cur.execute("""
         theStudent.student1 = laterStudent.SID AND
         laterStudent.major LIKE 'ABC%' AND
         r1.RTERM < r2.RTERM
-    GROUP BY theStudent.studentMaj ORDER BY COUNT(DISTINCT theStudent.student1) DESC
+    GROUP BY theStudent.studentMaj ORDER BY totTrans DESC
     LIMIT 5;
     """)
 majorCount= cur.fetchall()
 
-cur.execute("""
-    SELECT SUM(st.totTrans)
-    FROM(
-        SELECT COUNT(DISTINCT theStudent.student1) AS totTrans
-        FROM
-            (SELECT DISTINCT sameSIDs.student1, sameSIDs.studentMaj
-            FROM
-                (SELECT s1.SID AS student1, s1.major AS studentMaj
-                 FROM student s1, student s2
-                 WHERE s1.SID = s2.SID AND s1.major NOT LIKE 'ABC%'
-                )AS sameSIDs) AS theStudent, roster r1, roster r2, student laterStudent
-        WHERE
-            theStudent.student1 = r1.RSID AND
-            theStudent.student1 = r2.RSID AND
-            theStudent.student1 = laterStudent.SID AND
-            laterStudent.major LIKE 'ABC%' AND
-            r1.RTERM < r2.RTERM
-        GROUP BY theStudent.studentMaj) AS st;
-    """)
+# cur.execute("""
+#     SELECT SUM(st.totTrans)
+#     FROM(
+#         SELECT COUNT(DISTINCT theStudent.student1) AS totTrans
+#         FROM
+#             (SELECT DISTINCT sameSIDs.student1, sameSIDs.studentMaj
+#             FROM
+#                 (SELECT s1.SID AS student1, s1.major AS studentMaj
+#                  FROM student s1, student s2
+#                  WHERE s1.SID = s2.SID AND s1.major NOT LIKE 'ABC%'
+#                 )AS sameSIDs) AS theStudent, roster r1, roster r2, student laterStudent
+#         WHERE
+#             theStudent.student1 = r1.RSID AND
+#             theStudent.student1 = r2.RSID AND
+#             theStudent.student1 = laterStudent.SID AND
+#             laterStudent.major LIKE 'ABC%' AND
+#             r1.RTERM < r2.RTERM
+#         GROUP BY theStudent.studentMaj) AS st;
+#     """)
 
 total = cur.fetchall()
 count = [x[0] for x in majorCount]
