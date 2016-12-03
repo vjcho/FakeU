@@ -29,36 +29,69 @@ for i in range(1,21):
 
 # 3b
 print '3b:'
+# non-weighted gpa
+# for i in range(1,21):
+#     cur.execute("""
+#         SELECT AVG(x.gpa) 
+#         FROM (
+#             SELECT CASE
+#                 WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0
+#                 WHEN GRADE = 'A-' THEN 3.7
+#                 WHEN GRADE = 'B+' THEN 3.33
+#                 WHEN GRADE = 'B' THEN 3
+#                 WHEN GRADE = 'B-' THEN 2.7
+#                 WHEN GRADE = 'C+' THEN 2.3
+#                 WHEN GRADE = 'C' THEN 2
+#                 WHEN GRADE = 'C-' THEN 1.7
+#                 WHEN GRADE = 'D+' THEN 1.3
+#                 WHEN GRADE = 'D' THEN 1
+#                 WHEN GRADE = 'D-' THEN .7
+#                 WHEN GRADE = 'F' THEN 0
+#             END AS gpa
+#             FROM student, 
+#                 (SELECT id FROM (
+#                     SELECT TERM, SUM(student.UNITS) AS total, student.sid AS id 
+#                     FROM course, student 
+#                     WHERE student.scid = course.cid 
+#                     GROUP BY student.sid, TERM) AS comb 
+#                 WHERE comb.total = %s) AS tot
+#             WHERE student.sid = tot.id
+#         ) AS x
+#         """ % (i))
+#     result = cur.fetchall()
+#     print i,result
+
+# weighted gpa
 for i in range(1,21):
-    cur.execute("""
-        SELECT AVG(x.gpa) 
-        FROM (
-            SELECT CASE
-                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0
-                WHEN GRADE = 'A-' THEN 3.7
-                WHEN GRADE = 'B+' THEN 3.33
-                WHEN GRADE = 'B' THEN 3
-                WHEN GRADE = 'B-' THEN 2.7
-                WHEN GRADE = 'C+' THEN 2.3
-                WHEN GRADE = 'C' THEN 2
-                WHEN GRADE = 'C-' THEN 1.7
-                WHEN GRADE = 'D+' THEN 1.3
-                WHEN GRADE = 'D' THEN 1
-                WHEN GRADE = 'D-' THEN .7
-                WHEN GRADE = 'F' THEN 0
-            END AS gpa
-            FROM student, 
-                (SELECT id FROM (
-                    SELECT TERM, SUM(student.UNITS) AS total, student.sid AS id 
-                    FROM course, student 
-                    WHERE student.scid = course.cid 
-                    GROUP BY student.sid, TERM) AS comb 
-                WHERE comb.total = %s) AS tot
-            WHERE student.sid = tot.id
-        ) AS x
+    cur.execute("""   
+        SELECT AVG(weighted)
+            FROM(
+            SELECT SUM(gpa)/SUM(units) AS weighted, term, sid
+            FROM (
+                SELECT sid, term, cid, student.units, CASE
+                        WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0 * student.UNITS
+                        WHEN GRADE = 'A-' THEN 3.7 * student.UNITS
+                        WHEN GRADE = 'B+' THEN 3.33 * student.UNITS
+                        WHEN GRADE = 'B' THEN 3 * student.UNITS
+                        WHEN GRADE = 'B-' THEN 2.7 * student.UNITS
+                        WHEN GRADE = 'C+' THEN 2.3 * student.UNITS
+                        WHEN GRADE = 'C' THEN 2 * student.UNITS
+                        WHEN GRADE = 'C-' THEN 1.7 * student.UNITS
+                        WHEN GRADE = 'D+' THEN 1.3 * student.UNITS
+                        WHEN GRADE = 'D' THEN 1 * student.UNITS
+                        WHEN GRADE = 'D-' THEN .7 * student.UNITS
+                        WHEN GRADE = 'F' THEN 0
+                    END AS gpa 
+                FROM student, course
+                WHERE student.scid = course.cid
+            ) AS x
+            GROUP BY term, sid
+            HAVING SUM(units) = %s
+        ) AS weight
+        WHERE weighted > -1;
         """ % (i))
     result = cur.fetchall()
-    print i,result
+    print i, result
 
 # 3c
 print '3c:'
@@ -365,14 +398,8 @@ for i in range(0,len(first)):
 
 print ans
 
-
-# 3f
-
-# 3g
-
-
-
 #3f
+print '3f:'
 cur.execute("""
     SELECT avgs.majors, avgs.avgpa 
     FROM (SELECT majors, AVG(gpa) AS avgpa
@@ -474,6 +501,7 @@ min = cur.fetchall()
 print min
 
 #3g
+print '3g:'
 cur.execute("""
     SELECT COUNT(DISTINCT theStudent.student1)
     FROM
