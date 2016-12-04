@@ -1,6 +1,6 @@
 # ECS165A HW4
 # Valerie Cho 998831802
-# Selena Tuyen
+# Selena Tuyen 999085398
 
 import psycopg2
 import csv
@@ -18,9 +18,9 @@ for i in range(1,21):
         FROM (
             SELECT COUNT(*) 
             FROM (
-                SELECT TERM, SUM(student.UNITS) AS total, student.sid 
-                FROM course, student
-                WHERE student.scid = course.cid GROUP BY student.sid, TERM) AS totalStud 
+               SELECT TERM, SUM(student.UNITS) AS total, student.sid 
+               FROM course, student
+               WHERE student.scid = course.cid GROUP BY student.sid, TERM) AS totalStud 
             WHERE totalStud.total = %s) AS c,
         (SELECT COUNT(*) FROM student WHERE UNITS <> 0) AS tot;
         """ % (i))
@@ -29,43 +29,11 @@ for i in range(1,21):
 
 # 3b
 print '3b:'
-# non-weighted gpa
-for i in range(1,21):
-    cur.execute("""
-        SELECT AVG(x.gpa) 
-        FROM (
-            SELECT CASE
-                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0
-                WHEN GRADE = 'A-' THEN 3.7
-                WHEN GRADE = 'B+' THEN 3.33
-                WHEN GRADE = 'B' THEN 3
-                WHEN GRADE = 'B-' THEN 2.7
-                WHEN GRADE = 'C+' THEN 2.3
-                WHEN GRADE = 'C' THEN 2
-                WHEN GRADE = 'C-' THEN 1.7
-                WHEN GRADE = 'D+' THEN 1.3
-                WHEN GRADE = 'D' THEN 1
-                WHEN GRADE = 'D-' THEN .7
-                WHEN GRADE = 'F' THEN 0
-            END AS gpa
-            FROM student, 
-                (SELECT id FROM (
-                    SELECT TERM, SUM(student.UNITS) AS total, student.sid AS id 
-                    FROM course, student 
-                    WHERE student.scid = course.cid 
-                    GROUP BY student.sid, TERM) AS comb 
-                WHERE comb.total = %s) AS tot
-            WHERE student.sid = tot.id
-        ) AS x
-        """ % (i))
-    result = cur.fetchall()
-    print i,result
-
 # weighted gpa
 for i in range(1,21):
     cur.execute("""   
         SELECT AVG(weighted)
-            FROM(
+        FROM(
             SELECT SUM(gpa)/SUM(units) AS weighted, term, sid
             FROM (
                 SELECT sid, term, cid, student.units, CASE
@@ -83,12 +51,12 @@ for i in range(1,21):
                         WHEN GRADE = 'F' THEN 0
                     END AS gpa 
                 FROM student, course
-                WHERE student.scid = course.cid
+                WHERE student.scid = course.cid AND student.sterm = course.term
             ) AS x
+            WHERE gpa is not null
             GROUP BY term, sid
             HAVING SUM(units) = %s
-        ) AS weight
-        WHERE weighted > -1;
+        ) AS weight;
         """ % (i))
     result = cur.fetchall()
     print i, result
@@ -96,206 +64,126 @@ for i in range(1,21):
 # 3c
 print '3c:'
 cur.execute("""
-    SELECT avgs.instructor, avgs.avgGpa AS "Average GPA"
-    FROM (SELECT instructor, AVG(gpa) AS avgGpa
-        FROM (
-            SELECT CASE
-                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0
-                WHEN GRADE = 'A-' THEN 3.7
-                WHEN GRADE = 'B+' THEN 3.33
-                WHEN GRADE = 'B' THEN 3
-                WHEN GRADE = 'B-' THEN 2.7
-                WHEN GRADE = 'C+' THEN 2.3
-                WHEN GRADE = 'C' THEN 2
-                WHEN GRADE = 'C-' THEN 1.7
-                WHEN GRADE = 'D+' THEN 1.3
-                WHEN GRADE = 'D' THEN 1
-                WHEN GRADE = 'D-' THEN .7
-                WHEN GRADE = 'F' THEN 0
-            END AS gpa, roster.RINSTRUCTOR AS instructor
-            FROM student, roster
-            WHERE student.scid = roster.rcid
-        ) AS grades
-        GROUP BY instructor) AS avgs,
-      
-        (SELECT MIN(avg) AS lowest, MAX(avg) AS highest
-        FROM (
-            SELECT instructor, AVG(gpa) 
-            FROM (
-                SELECT CASE
-                    WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0
-                    WHEN GRADE = 'A-' THEN 3.7
-                    WHEN GRADE = 'B+' THEN 3.33
-                    WHEN GRADE = 'B' THEN 3
-                    WHEN GRADE = 'B-' THEN 2.7
-                    WHEN GRADE = 'C+' THEN 2.3
-                    WHEN GRADE = 'C' THEN 2
-                    WHEN GRADE = 'C-' THEN 1.7
-                    WHEN GRADE = 'D+' THEN 1.3
-                    WHEN GRADE = 'D' THEN 1
-                    WHEN GRADE = 'D-' THEN .7
-                    WHEN GRADE = 'F' THEN 0
-                END AS gpa, roster.RINSTRUCTOR AS instructor
-                FROM student, roster
-                WHERE student.scid = roster.rcid) AS grades
-            GROUP BY instructor
-        ) AS averages) AS max
-    WHERE avgs.avgGpa = max.highest;
+    SELECT SUM(gpa)/SUM(units) AS weighted, instructor
+    FROM (
+        SELECT CASE
+            WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0 * student.UNITS
+            WHEN GRADE = 'A-' THEN 3.7 * student.UNITS
+            WHEN GRADE = 'B+' THEN 3.33 * student.UNITS
+            WHEN GRADE = 'B' THEN 3 * student.UNITS
+            WHEN GRADE = 'B-' THEN 2.7 * student.UNITS
+            WHEN GRADE = 'C+' THEN 2.3 * student.UNITS
+            WHEN GRADE = 'C' THEN 2 * student.UNITS
+            WHEN GRADE = 'C-' THEN 1.7 * student.UNITS
+            WHEN GRADE = 'D+' THEN 1.3 * student.UNITS
+            WHEN GRADE = 'D' THEN 1 * student.UNITS
+            WHEN GRADE = 'D-' THEN .7 * student.UNITS
+            WHEN GRADE = 'F' THEN 0
+        END AS gpa, course.subj, course.crse, roster.rinstructor AS instructor, course.term, course.cid, student.units
+        FROM student, course, roster
+        WHERE student.scid = course.cid AND roster.rcid = course.cid AND roster.rcid = student.scid
+    ) AS grades
+    WHERE instructor <> '' AND gpa is not null
+    GROUP BY instructor
     """)
-max = cur.fetchall()
-print max
+results = cur.fetchall()
+gpas = [x[0] for x in results]
+instructors = [x[1] for x in results]
 
-cur.execute("""
-    SELECT avgs.instructor, avgs.avgGpa AS "Average GPA"
-    FROM (SELECT instructor, AVG(gpa) AS avgGpa
-        FROM (
-            SELECT CASE
-                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0
-                WHEN GRADE = 'A-' THEN 3.7
-                WHEN GRADE = 'B+' THEN 3.33
-                WHEN GRADE = 'B' THEN 3
-                WHEN GRADE = 'B-' THEN 2.7
-                WHEN GRADE = 'C+' THEN 2.3
-                WHEN GRADE = 'C' THEN 2
-                WHEN GRADE = 'C-' THEN 1.7
-                WHEN GRADE = 'D+' THEN 1.3
-                WHEN GRADE = 'D' THEN 1
-                WHEN GRADE = 'D-' THEN .7
-                WHEN GRADE = 'F' THEN 0
-            END AS gpa, roster.RINSTRUCTOR AS instructor
-            FROM student, roster
-            WHERE student.scid = roster.rcid
-        ) AS grades
-        GROUP BY instructor) AS avgs,
-      
-        (SELECT MIN(avg) AS lowest, MAX(avg) AS highest
-        FROM (
-            SELECT instructor, AVG(gpa) 
-            FROM (
-                SELECT CASE
-                    WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0
-                    WHEN GRADE = 'A-' THEN 3.7
-                    WHEN GRADE = 'B+' THEN 3.33
-                    WHEN GRADE = 'B' THEN 3
-                    WHEN GRADE = 'B-' THEN 2.7
-                    WHEN GRADE = 'C+' THEN 2.3
-                    WHEN GRADE = 'C' THEN 2
-                    WHEN GRADE = 'C-' THEN 1.7
-                    WHEN GRADE = 'D+' THEN 1.3
-                    WHEN GRADE = 'D' THEN 1
-                    WHEN GRADE = 'D-' THEN .7
-                    WHEN GRADE = 'F' THEN 0
-                END AS gpa, roster.RINSTRUCTOR AS instructor
-                FROM student, roster
-                WHERE student.scid = roster.rcid) AS grades
-            GROUP BY instructor
-        ) AS averages) AS min
-    WHERE avgs.avgGpa = min.lowest;
-    """)
-min = cur.fetchall()
-print min
+maxindex = gpas.index(max(gpas))
+minindex = gpas.index(min(gpas))
+print "Easiest Instructor | Hardest Instructor"
+print instructors[maxindex],max(gpas),'|',instructors[minindex],min(g for g in gpas if g is not None)
 
 # 3d
 print '3d:'
-cur.execute("""
-    SELECT avgs.instructor, avgs.avgGpa AS "Average GPA"
-    FROM (SELECT AVG(gpa) AS avgGpa, instructor
+print "Easiest Instructor | Hardest Instructor"
+for i in range(101,115): # only takes into account classes that have instructors
+    cur.execute("""
+        SELECT SUM(gpa)/SUM(units) AS weighted, instructor, subj, crse
         FROM (
             SELECT CASE
-                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4
-                WHEN GRADE = 'A-' THEN 3.7
-                WHEN GRADE = 'B+' THEN 3.33
-                WHEN GRADE = 'B' THEN 3
-                WHEN GRADE = 'B-' THEN 2.7
-                WHEN GRADE = 'C+' THEN 2.3
-                WHEN GRADE = 'C' THEN 2
-                WHEN GRADE = 'C-' THEN 1.7
-                WHEN GRADE = 'D+' THEN 1.3
-                WHEN GRADE = 'D' THEN 1
-                WHEN GRADE = 'D-' THEN .7
+                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4.0 * student.UNITS
+                WHEN GRADE = 'A-' THEN 3.7 * student.UNITS
+                WHEN GRADE = 'B+' THEN 3.33 * student.UNITS
+                WHEN GRADE = 'B' THEN 3 * student.UNITS
+                WHEN GRADE = 'B-' THEN 2.7 * student.UNITS
+                WHEN GRADE = 'C+' THEN 2.3 * student.UNITS
+                WHEN GRADE = 'C' THEN 2 * student.UNITS
+                WHEN GRADE = 'C-' THEN 1.7 * student.UNITS
+                WHEN GRADE = 'D+' THEN 1.3 * student.UNITS
+                WHEN GRADE = 'D' THEN 1 * student.UNITS
+                WHEN GRADE = 'D-' THEN .7 * student.UNITS
                 WHEN GRADE = 'F' THEN 0
-            END AS gpa, course.subj, course.crse, roster.rinstructor AS instructor
+            END AS gpa, course.subj, course.crse, roster.rinstructor AS instructor, course.term, course.cid, student.units
             FROM student, course, roster
             WHERE student.scid = course.cid AND roster.rcid = course.cid AND roster.rcid = student.scid AND course.subj = 'ABC' AND course.crse BETWEEN 100 AND 199
         ) AS grades
-    GROUP BY instructor) AS avgs,
-      (SELECT MIN(avg) AS lowest, MAX(avg) AS highest
-      FROM (
-        SELECT AVG(gpa), instructor
-        FROM (
-            SELECT CASE
-                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4
-                WHEN GRADE = 'A-' THEN 3.7
-                WHEN GRADE = 'B+' THEN 3.33
-                WHEN GRADE = 'B' THEN 3
-                WHEN GRADE = 'B-' THEN 2.7
-                WHEN GRADE = 'C+' THEN 2.3
-                WHEN GRADE = 'C' THEN 2
-                WHEN GRADE = 'C-' THEN 1.7
-                WHEN GRADE = 'D+' THEN 1.3
-                WHEN GRADE = 'D' THEN 1
-                WHEN GRADE = 'D-' THEN .7
-                WHEN GRADE = 'F' THEN 0
-            END AS gpa, course.subj, course.crse, roster.rinstructor AS instructor
-            FROM student, course, roster
-            WHERE student.scid = course.cid AND roster.rcid = course.cid AND roster.rcid = student.scid AND course.subj = 'ABC' AND course.crse BETWEEN 100 AND 199
-        ) AS grades
-        GROUP BY instructor
-        ) AS averages) AS max
-    WHERE avgs.avgGpa = max.highest;
-    """)
-max = cur.fetchall()
-print max
+        WHERE crse = %s AND instructor <> '' AND gpa is not null
+        GROUP BY instructor, subj, crse
+        """ % (i))
+    result = cur.fetchall()
+    gpas = [x[0] for x in result]
+    instructors = [x[1] for x in result]
+    subjs = [x[2] for x in result]
+    crses = [x[3] for x in result]
 
-cur.execute("""
-    SELECT avgs.instructor, avgs.avgGpa AS "Average GPA"
-    FROM (SELECT AVG(gpa) AS avgGpa, instructor
-        FROM (
-            SELECT CASE
-                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4
-                WHEN GRADE = 'A-' THEN 3.7
-                WHEN GRADE = 'B+' THEN 3.33
-                WHEN GRADE = 'B' THEN 3
-                WHEN GRADE = 'B-' THEN 2.7
-                WHEN GRADE = 'C+' THEN 2.3
-                WHEN GRADE = 'C' THEN 2
-                WHEN GRADE = 'C-' THEN 1.7
-                WHEN GRADE = 'D+' THEN 1.3
-                WHEN GRADE = 'D' THEN 1
-                WHEN GRADE = 'D-' THEN .7
-                WHEN GRADE = 'F' THEN 0
-            END AS gpa, course.subj, course.crse, roster.rinstructor AS instructor
-            FROM student, course, roster
-            WHERE student.scid = course.cid AND roster.rcid = course.cid AND roster.rcid = student.scid AND course.subj = 'ABC' AND course.crse BETWEEN 100 AND 199
-        ) AS grades
-    GROUP BY instructor) AS avgs,
-      (SELECT MIN(avg) AS lowest, MAX(avg) AS highest
-      FROM (
-        SELECT AVG(gpa), instructor
-        FROM (
-            SELECT CASE
-                WHEN GRADE = 'A+' OR GRADE = 'A' THEN 4
-                WHEN GRADE = 'A-' THEN 3.7
-                WHEN GRADE = 'B+' THEN 3.33
-                WHEN GRADE = 'B' THEN 3
-                WHEN GRADE = 'B-' THEN 2.7
-                WHEN GRADE = 'C+' THEN 2.3
-                WHEN GRADE = 'C' THEN 2
-                WHEN GRADE = 'C-' THEN 1.7
-                WHEN GRADE = 'D+' THEN 1.3
-                WHEN GRADE = 'D' THEN 1
-                WHEN GRADE = 'D-' THEN .7
-                WHEN GRADE = 'F' THEN 0
-            END AS gpa, course.subj, course.crse, roster.rinstructor AS instructor
-            FROM student, course, roster
-            WHERE student.scid = course.cid AND roster.rcid = course.cid AND roster.rcid = student.scid AND course.subj = 'ABC' AND course.crse BETWEEN 100 AND 199
-        ) AS grades
-        GROUP BY instructor
-        ) AS averages) AS max
-    WHERE avgs.avgGpa = max.lowest;
-    """)
-min = cur.fetchall()
-print min
+    
+    if len(gpas) == 0 or max(gpas) == None:
+        passrate = []
+        cur.execute("""
+            SELECT COUNT(*), instructor, subj, crse
+            FROM (
+                SELECT grade, course.subj, course.crse, roster.rinstructor AS instructor, course.term, course.cid
+                FROM student, course, roster
+                WHERE student.scid = course.cid AND roster.rcid = course.cid AND roster.rcid = student.scid AND course.subj = 'ABC' AND course.crse BETWEEN 100 AND 199
+            ) AS grades
+            WHERE crse = %s AND grade = 'P' AND instructor <> ''
+            GROUP BY instructor, subj, crse
+            """ % (i))
+        passesResult = cur.fetchall()
+        passes = [x[0] for x in passesResult]
+        pinstructors = [x[1] for x in passesResult]
+        subjs = [x[2] for x in passesResult]
+        crses = [x[3] for x in passesResult]
+
+        cur.execute("""
+            SELECT COUNT(*), instructor, subj, crse
+            FROM (
+                SELECT grade, course.subj, course.crse, roster.rinstructor AS instructor, course.term, course.cid
+                FROM student, course, roster
+                WHERE student.scid = course.cid AND roster.rcid = course.cid AND roster.rcid = student.scid AND course.subj = 'ABC' AND course.crse BETWEEN 100 AND 199
+            ) AS grades
+            WHERE crse = %s AND instructor <> ''
+            GROUP BY instructor, subj, crse
+            """ % (i))
+        total = cur.fetchall()
+        total = [x[0] for x in total]
+        for k in range(0,len(passes)):
+            passrate.append(float(passes[k])/float(total[k]) * 100)
+        maxindexes = []
+        minindexes = []
+        maxpassrate = max(passrate)
+        minpassrate = min(passrate)
+        # print len(passrate), len(pinstructors)
+        for k in range(0, len(passrate)):
+            if passrate[k] == maxpassrate:
+                maxindexes.append(k)
+            if passrate[k] == minpassrate:
+                minindexes.append(k)
+        maxindex = passrate.index(max(passrate))
+        minindex = passrate.index(min(passrate))
+        print subjs[0], crses[0], 'Easiest Instructors:'
+        for index in maxindexes:
+            print max(passrate), pinstructors[index]
+
+        print subjs[0],crses[0], 'Hardest Instructors:'
+        for index in minindexes:
+            print min(passrate), pinstructors[index]
+    else:
+        maxindex = gpas.index(max(gpas))
+        minindex = gpas.index(min(gpas))
+        print subjs[0], crses[0], max(gpas), instructors[maxindex], '|', min(g for g in gpas if g is not None), instructors[minindex]
 
 # 3e
 print '3e'
@@ -304,7 +192,8 @@ cur.execute("""
     FROM
     (SELECT *, meeting.term AS term1
     FROM meeting, course
-    WHERE meeting.mcid = course.cid AND meeting.term = course.term) AS c1, (SELECT *, meeting.term AS term2
+    WHERE meeting.mcid = course.cid AND meeting.term = course.term) AS c1, 
+    (SELECT *, meeting.term AS term2
     FROM meeting, course
     WHERE meeting.mcid = course.cid AND meeting.term = course.term) AS c2
     WHERE c1.term1 = c2.term2 AND RIGHT(c1.term1,2) = '06' AND c1.days ~ c2.days AND 
@@ -396,7 +285,7 @@ for i in range(0,len(first)):
         classes.append(sec[i])
         ans.append((first[i],sec[i]))
 
-print ans
+print sorted(ans)
 
 #3f
 print '3f:'
@@ -503,23 +392,20 @@ print min
 #3g
 print '3g:'
 cur.execute("""
-    SELECT st.totTrans,SUM(st.totTrans), 
-    FROM (
-        SELECT COUNT(DISTINCT theStudent.student1) AS totTrans
+    SELECT COUNT(DISTINCT theStudent.student1)
+    FROM
+        (SELECT DISTINCT sameSIDs.student1, sameSIDs.studentMaj
         FROM
-            (SELECT DISTINCT sameSIDs.student1, sameSIDs.studentMaj
-            FROM
-                (SELECT s1.SID AS student1, s1.major AS studentMaj
-                 FROM student s1, student s2
-                 WHERE s1.SID = s2.SID AND s1.major NOT LIKE 'ABC%'
-                )AS sameSIDs) AS theStudent, roster r1, roster r2, student laterStudent
-        WHERE
-            theStudent.student1 = r1.RSID AND 
-            theStudent.student1 = r2.RSID AND 
-            theStudent.student1 = laterStudent.SID AND 
-            laterStudent.major LIKE 'ABC%' AND
-            r1.RTERM < r2.RTERM
-    GROUP BY theStudent.studentMaj) AS st;
+            (SELECT s1.SID AS student1, s1.major AS studentMaj
+             FROM student s1, student s2
+             WHERE s1.SID = s2.SID AND s1.major NOT LIKE 'ABC%'
+            )AS sameSIDs) AS theStudent, roster r1, roster r2, student laterStudent
+    WHERE
+        theStudent.student1 = r1.RSID AND 
+        theStudent.student1 = r2.RSID AND 
+        theStudent.student1 = laterStudent.SID AND 
+        laterStudent.major LIKE 'ABC%' AND
+        r1.RTERM < r2.RTERM; 
     """)
 trans = cur.fetchall()
 
@@ -534,7 +420,7 @@ print float(ans[0])/float(ans2[0]) * 100
 
 
 cur.execute("""
-    SELECT COUNT(DISTINCT theStudent.student1) AS totTrans, theStudent.studentMaj
+    SELECT COUNT(DISTINCT theStudent.student1), theStudent.studentMaj
     FROM
         (SELECT DISTINCT sameSIDs.student1, sameSIDs.studentMaj
         FROM
@@ -548,36 +434,37 @@ cur.execute("""
         theStudent.student1 = laterStudent.SID AND
         laterStudent.major LIKE 'ABC%' AND
         r1.RTERM < r2.RTERM
-    GROUP BY theStudent.studentMaj ORDER BY totTrans DESC
+    GROUP BY theStudent.studentMaj ORDER BY COUNT(DISTINCT theStudent.student1) DESC
     LIMIT 5;
     """)
 majorCount= cur.fetchall()
 
-# cur.execute("""
-#     SELECT SUM(st.totTrans)
-#     FROM(
-#         SELECT COUNT(DISTINCT theStudent.student1) AS totTrans
-#         FROM
-#             (SELECT DISTINCT sameSIDs.student1, sameSIDs.studentMaj
-#             FROM
-#                 (SELECT s1.SID AS student1, s1.major AS studentMaj
-#                  FROM student s1, student s2
-#                  WHERE s1.SID = s2.SID AND s1.major NOT LIKE 'ABC%'
-#                 )AS sameSIDs) AS theStudent, roster r1, roster r2, student laterStudent
-#         WHERE
-#             theStudent.student1 = r1.RSID AND
-#             theStudent.student1 = r2.RSID AND
-#             theStudent.student1 = laterStudent.SID AND
-#             laterStudent.major LIKE 'ABC%' AND
-#             r1.RTERM < r2.RTERM
-#         GROUP BY theStudent.studentMaj) AS st;
-#     """)
+cur.execute("""
+    SELECT SUM(st.totTrans)
+    FROM(
+        SELECT COUNT(DISTINCT theStudent.student1) AS totTrans
+        FROM
+            (SELECT DISTINCT sameSIDs.student1, sameSIDs.studentMaj
+            FROM
+                (SELECT s1.SID AS student1, s1.major AS studentMaj
+                 FROM student s1, student s2
+                 WHERE s1.SID = s2.SID AND s1.major NOT LIKE 'ABC%'
+                )AS sameSIDs) AS theStudent, roster r1, roster r2, student laterStudent
+        WHERE
+            theStudent.student1 = r1.RSID AND
+            theStudent.student1 = r2.RSID AND
+            theStudent.student1 = laterStudent.SID AND
+            laterStudent.major LIKE 'ABC%' AND
+            r1.RTERM < r2.RTERM
+        GROUP BY theStudent.studentMaj) AS st;
+    """)
 
 total = cur.fetchall()
 count = [x[0] for x in majorCount]
+
 major = [x[1] for x in majorCount]
 ans2 = [x[0] for x in total]
-for i in  range (0,5):
+for i in range (0,5):
     print float(count[i])/float(ans2[0]) * 100, '%',  major[i]
 
 cur.close()
